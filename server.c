@@ -82,6 +82,15 @@ int main(int argc, char* argv[]) {
             if (sendto(MaSocket, &pong_message, sizeof(pong_message), 0, (struct sockaddr*)&client_addr, sizeof(client_addr)) < 0) {
                 perror("erreur à l'envoi du pong");
             }
+
+            struct ChatMessage join_info;
+            strncpy(join_info.pseudo, message_received.pseudo, sizeof(join_info.pseudo) - 1);
+            strncpy(join_info.content, "joined", sizeof(join_info.content) - 1);
+            for (int i = 0; i < client_count; i++) {
+                if (sendto(MaSocket, &join_info, sizeof(join_info), 0, (struct sockaddr*)&clients[i], sizeof(clients[i])) < 0) {
+                    perror("erreur à l'envoi");
+                }
+            }
         } else {  // Si le message n'est pas un ping, on le diffuse à tous les clients connus
 
             for (int i = 0; i < client_count; i++) {
