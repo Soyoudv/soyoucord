@@ -12,13 +12,20 @@
 
 #define MAXBUF 1024
 
-struct ChatMessage {
+typedef struct ChatMessage {
     char pseudo[64];
     char content[MAXBUF];
-};
+} ChatMessage;
+
+ChatMessage create_chat_message(const char* pseudo, const char* content) {
+    ChatMessage message;
+    strncpy(message.pseudo, pseudo, sizeof(message.pseudo) - 1);
+    strncpy(message.content, content, sizeof(message.content) - 1);
+    return message;
+}
 
 void ping(const char* pseudo, int MaSocket, struct sockaddr_in serveur_addr) {
-    struct ChatMessage ping_message;
+    ChatMessage ping_message;
     memset(&ping_message, 0, sizeof(ping_message));
     strncpy(ping_message.pseudo, pseudo, sizeof(ping_message.pseudo) - 1);
     strncpy(ping_message.content, "ping", sizeof(ping_message.content) - 1);
@@ -34,7 +41,7 @@ void ping(const char* pseudo, int MaSocket, struct sockaddr_in serveur_addr) {
 int pong_wait(int MaSocket) {
     // printf("Attente d'un pong du serveur pour confirmer ma présence\n");
     while (1) {
-        struct ChatMessage message_received;
+        ChatMessage message_received;
         socklen_t addr_len = sizeof(struct sockaddr_in);
         int retourRecv = recvfrom(MaSocket, &message_received, sizeof(message_received), 0, NULL, &addr_len);
         if (retourRecv < 0) {
@@ -66,7 +73,7 @@ void print_message(const char* msg) {
 void* reading(void* arg) {
     int MaSocket = *(int*)arg;
     while (1) {
-        struct ChatMessage message_received;
+        ChatMessage message_received;
         socklen_t addr_len = sizeof(struct sockaddr_in);
         int retourRecv = recvfrom(MaSocket, &message_received, sizeof(message_received), 0, NULL, &addr_len);
         if (retourRecv < 0) {
@@ -125,7 +132,7 @@ int main(int argc, char* argv[]) {
     pthread_create(&thread, NULL, reading, &MaSocket);
 
     while (1) {
-        struct ChatMessage message_sent;
+        ChatMessage message_sent;
         memset(&message_sent, 0, sizeof(message_sent));
         strncpy(message_sent.pseudo, pseudo, sizeof(message_sent.pseudo) - 1);
 
