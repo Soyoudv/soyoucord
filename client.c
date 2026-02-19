@@ -17,6 +17,43 @@ struct ChatMessage {
     char content[MAXBUF];
 };
 
+void ping(const char* pseudo, int MaSocket, struct sockaddr_in serveur_addr) {
+    struct ChatMessage ping_message;
+    memset(&ping_message, 0, sizeof(ping_message));
+    strncpy(ping_message.pseudo, pseudo, sizeof(ping_message.pseudo) - 1);
+    strncpy(ping_message.content, "ping", sizeof(ping_message.content) - 1);
+    printf("Client : Envoi d'un ping au serveur pour signaler ma présence\n");
+
+    if (sendto(MaSocket, &ping_message, sizeof(ping_message), 0, (struct sockaddr*)&serveur_addr, sizeof(serveur_addr)) < 0) {
+        perror("Client : erreur à l'envoi du ping");
+        close(MaSocket);
+        exit(1);
+    }
+}
+
+int pong_wait(int MaSocket) {
+    // printf("Client : Attente d'un pong du serveur pour confirmer ma présence\n");
+    time_t start_time = time(NULL);
+    while (1) {
+        struct ChatMessage message_received;
+        socklen_t addr_len = sizeof(struct sockaddr_in);
+        int retourRecv = recvfrom(MaSocket, &message_received, sizeof(message_received), 0, NULL, &addr_len);
+        if (retourRecv < 0) {
+            perror("Client : erreur à la réception");
+            close(MaSocket);
+            exit(1);
+        }
+        if (strcmp(message_received.pseudo, "system") == 0 && strcmp(message_received.content, "pong") == 0) {
+            // printf("Client : Pong reçu du serveur, ma présence est confirmée\n");
+            return 0;
+        }
+        if (time(NULL) - start_time > 5) {
+            printf("Client : Timeout en attente du pong du serveur\n");
+            return -1;
+        }
+    }
+}
+
 void print_message(const char* msg) {
     rl_save_prompt();        // Sauvegarde l'état courant
     rl_replace_line("", 0);  // Efface la ligne en cours
@@ -56,16 +93,12 @@ int main(int argc, char* argv[]) {
 
     char* pseudo = argv[3];  // pseudo du client
 
-    printf("Bienvenue dans le chat UDP, %s !\n", pseudo);
-
     int MaSocket = socket(PF_INET, SOCK_DGRAM, 0);
 
     if (MaSocket == -1) {
         perror("Client : pb creation socket , on arrête tout:");
         exit(1);
     }
-
-    printf("Client : Youpi j'ai créé une socket pour le client\n");
 
     struct sockaddr_in client_addr;
     client_addr.sin_family = AF_INET;
@@ -80,6 +113,15 @@ int main(int argc, char* argv[]) {
         close(MaSocket);
         exit(1);
     }
+
+    ping(pseudo, MaSocket, serveur_addr);
+    if (pong_wait(MaSocket) == -1) {
+        printf("Client : Le serveur n'a pas confirmé ma présence\n");
+        close(MaSocket);
+        exit(1);
+    }
+
+    printf("Bienvenue dans le chat UDP, %s !\n", pseudo);
 
     pthread_t thread;
     pthread_create(&thread, NULL, reading, &MaSocket);

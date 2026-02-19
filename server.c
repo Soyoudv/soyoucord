@@ -55,23 +55,33 @@ int main(int argc, char* argv[]) {
             close(MaSocket);
             exit(1);
         }
+        // printf("Serveur : Message reçu de %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
         message_received.pseudo[sizeof(message_received.pseudo) - 1] = '\0';
         message_received.content[sizeof(message_received.content) - 1] = '\0';
 
-        int known_client = 0;
-        for (int i = 0; i < client_count; i++) {
-            if (clients[i].sin_addr.s_addr == client_addr.sin_addr.s_addr && clients[i].sin_port == client_addr.sin_port) {
-                known_client = 1;
-                break;
+        if (strcmp(message_received.content, "ping") == 0) {  // si le message est un ping, on ajoute le client à la liste des clients connus s'il n'y est pas déjà
+            int known_client = 0;
+            for (int i = 0; i < client_count; i++) {
+                if (clients[i].sin_addr.s_addr == client_addr.sin_addr.s_addr && clients[i].sin_port == client_addr.sin_port) {
+                    known_client = 1;
+                    break;
+                }
             }
-        }
-        if (!known_client && client_count < MAX_CLIENTS) {
-            clients[client_count++] = client_addr;
-        }
+            if (!known_client && client_count < MAX_CLIENTS) {
+                clients[client_count++] = client_addr;
+            }
+            struct ChatMessage pong_message;
+            strncpy(pong_message.pseudo, "system", sizeof(pong_message.pseudo) - 1);
+            strncpy(pong_message.content, "pong", sizeof(pong_message.content) - 1);
+            if (sendto(MaSocket, &pong_message, sizeof(pong_message), 0, (struct sockaddr*)&client_addr, sizeof(client_addr)) < 0) {
+                perror("Serveur : erreur à l'envoi du pong");
+            }
+        } else {  // Si le message n'est pas un ping, on le diffuse à tous les clients connus
 
-        for (int i = 0; i < client_count; i++) {
-            if (sendto(MaSocket, &message_received, sizeof(message_received), 0, (struct sockaddr*)&clients[i], sizeof(clients[i])) < 0) {
-                perror("Serveur : erreur à l'envoi");
+            for (int i = 0; i < client_count; i++) {
+                if (sendto(MaSocket, &message_received, sizeof(message_received), 0, (struct sockaddr*)&clients[i], sizeof(clients[i])) < 0) {
+                    perror("Serveur : erreur à l'envoi");
+                }
             }
         }
     }
