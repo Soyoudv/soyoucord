@@ -33,7 +33,6 @@ void ping(const char* pseudo, int MaSocket, struct sockaddr_in serveur_addr) {
 
 int pong_wait(int MaSocket) {
     // printf("Client : Attente d'un pong du serveur pour confirmer ma présence\n");
-    time_t start_time = time(NULL);
     while (1) {
         struct ChatMessage message_received;
         socklen_t addr_len = sizeof(struct sockaddr_in);
@@ -46,9 +45,8 @@ int pong_wait(int MaSocket) {
         if (strcmp(message_received.pseudo, "system") == 0 && strcmp(message_received.content, "pong") == 0) {
             // printf("Client : Pong reçu du serveur, ma présence est confirmée\n");
             return 0;
-        }
-        if (time(NULL) - start_time > 5) {
-            printf("Client : Timeout en attente du pong du serveur\n");
+        } else if (strcmp(message_received.pseudo, "system") == 0 && strcmp(message_received.content, "unauthorized_name") == 0) {
+            printf("Client : Le serveur a refusé ma présence\n");
             return -1;
         }
     }
@@ -116,7 +114,7 @@ int main(int argc, char* argv[]) {
 
     ping(pseudo, MaSocket, serveur_addr);
     if (pong_wait(MaSocket) == -1) {
-        printf("Client : Le serveur n'a pas confirmé ma présence\n");
+        printf("Client : Join failed, exiting...\n");
         close(MaSocket);
         exit(1);
     }

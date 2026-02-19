@@ -60,6 +60,15 @@ int main(int argc, char* argv[]) {
         message_received.content[sizeof(message_received.content) - 1] = '\0';
 
         if (strcmp(message_received.content, "ping") == 0) {  // si le message est un ping, on ajoute le client à la liste des clients connus s'il n'y est pas déjà
+            struct ChatMessage pong_message;
+            strncpy(pong_message.pseudo, "system", sizeof(pong_message.pseudo) - 1);
+            strncpy(pong_message.content, "pong", sizeof(pong_message.content) - 1);
+
+            if (strcmp(message_received.pseudo, "system") == 0) {
+                strncpy(pong_message.content, "unauthorized_name", sizeof(pong_message.content) - 1);
+                printf("Serveur : Un client a tenté de se connecter avec le pseudo 'system', ce qui est interdit. Envoi d'un message d'erreur.\n");
+            }
+
             int known_client = 0;
             for (int i = 0; i < client_count; i++) {
                 if (clients[i].sin_addr.s_addr == client_addr.sin_addr.s_addr && clients[i].sin_port == client_addr.sin_port) {
@@ -70,9 +79,6 @@ int main(int argc, char* argv[]) {
             if (!known_client && client_count < MAX_CLIENTS) {
                 clients[client_count++] = client_addr;
             }
-            struct ChatMessage pong_message;
-            strncpy(pong_message.pseudo, "system", sizeof(pong_message.pseudo) - 1);
-            strncpy(pong_message.content, "pong", sizeof(pong_message.content) - 1);
             if (sendto(MaSocket, &pong_message, sizeof(pong_message), 0, (struct sockaddr*)&client_addr, sizeof(client_addr)) < 0) {
                 perror("Serveur : erreur à l'envoi du pong");
             }
