@@ -10,10 +10,17 @@
 #define MAXBUF 1024
 #define MAX_CLIENTS 128
 
-struct ChatMessage {
+typedef struct ChatMessage {
     char pseudo[64];
     char content[MAXBUF];
-};
+} ChatMessage;
+
+ChatMessage create_chat_message(const char* pseudo, const char* content) {
+    struct ChatMessage message;
+    strncpy(message.pseudo, pseudo, sizeof(message.pseudo) - 1);
+    strncpy(message.content, content, sizeof(message.content) - 1);
+    return message;
+}
 
 // ip: 127.0.0.1 car localhost
 int port = 31640;
@@ -60,9 +67,7 @@ int main(int argc, char* argv[]) {
         message_received.content[sizeof(message_received.content) - 1] = '\0';
 
         if (strcmp(message_received.content, "ping") == 0) {  // si le message est un ping, on ajoute le client à la liste des clients connus s'il n'y est pas déjà
-            struct ChatMessage pong_message;
-            strncpy(pong_message.pseudo, "system", sizeof(pong_message.pseudo) - 1);
-            strncpy(pong_message.content, "pong", sizeof(pong_message.content) - 1);
+            ChatMessage pong_message = create_chat_message("system", "pong");
 
             if (strcmp(message_received.pseudo, "system") == 0) {
                 strncpy(pong_message.content, "unauthorized_name", sizeof(pong_message.content) - 1);
@@ -83,9 +88,7 @@ int main(int argc, char* argv[]) {
                 perror("erreur à l'envoi du pong");
             }
 
-            struct ChatMessage join_info;
-            strncpy(join_info.pseudo, message_received.pseudo, sizeof(join_info.pseudo) - 1);
-            strncpy(join_info.content, "joined", sizeof(join_info.content) - 1);
+            ChatMessage join_info = create_chat_message(message_received.pseudo, "joined");
             for (int i = 0; i < client_count; i++) {
                 if (sendto(MaSocket, &join_info, sizeof(join_info), 0, (struct sockaddr*)&clients[i], sizeof(clients[i])) < 0) {
                     perror("erreur à l'envoi");
