@@ -22,31 +22,31 @@ void ping(const char* pseudo, int MaSocket, struct sockaddr_in serveur_addr) {
     memset(&ping_message, 0, sizeof(ping_message));
     strncpy(ping_message.pseudo, pseudo, sizeof(ping_message.pseudo) - 1);
     strncpy(ping_message.content, "ping", sizeof(ping_message.content) - 1);
-    printf("Client : Envoi d'un ping au serveur pour signaler ma présence\n");
+    // printf("Envoi d'un ping au serveur pour signaler ma présence\n");
 
     if (sendto(MaSocket, &ping_message, sizeof(ping_message), 0, (struct sockaddr*)&serveur_addr, sizeof(serveur_addr)) < 0) {
-        perror("Client : erreur à l'envoi du ping");
+        perror("erreur à l'envoi du ping");
         close(MaSocket);
         exit(1);
     }
 }
 
 int pong_wait(int MaSocket) {
-    // printf("Client : Attente d'un pong du serveur pour confirmer ma présence\n");
+    // printf("Attente d'un pong du serveur pour confirmer ma présence\n");
     while (1) {
         struct ChatMessage message_received;
         socklen_t addr_len = sizeof(struct sockaddr_in);
         int retourRecv = recvfrom(MaSocket, &message_received, sizeof(message_received), 0, NULL, &addr_len);
         if (retourRecv < 0) {
-            perror("Client : erreur à la réception");
+            perror("erreur à la réception");
             close(MaSocket);
             exit(1);
         }
         if (strcmp(message_received.pseudo, "system") == 0 && strcmp(message_received.content, "pong") == 0) {
-            // printf("Client : Pong reçu du serveur, ma présence est confirmée\n");
+            // printf("Pong reçu du serveur, ma présence est confirmée\n");
             return 0;
         } else if (strcmp(message_received.pseudo, "system") == 0 && strcmp(message_received.content, "unauthorized_name") == 0) {
-            printf("Client : Le serveur a refusé ma présence\n");
+            printf("Le serveur a refusé ma présence: %s\n", message_received.content);
             return -1;
         }
     }
@@ -70,7 +70,7 @@ void* reading(void* arg) {
         socklen_t addr_len = sizeof(struct sockaddr_in);
         int retourRecv = recvfrom(MaSocket, &message_received, sizeof(message_received), 0, NULL, &addr_len);
         if (retourRecv < 0) {
-            perror("Client : erreur à la réception");
+            perror("erreur à la réception");
             close(MaSocket);
             exit(1);
         }
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     int MaSocket = socket(PF_INET, SOCK_DGRAM, 0);
 
     if (MaSocket == -1) {
-        perror("Client : pb creation socket , on arrête tout:");
+        perror("pb creation socket , on arrête tout:");
         exit(1);
     }
 
@@ -107,14 +107,14 @@ int main(int argc, char* argv[]) {
     serveur_addr.sin_family = AF_INET;
     serveur_addr.sin_port = htons(atoi(argv[2]));
     if (inet_pton(AF_INET, argv[1], &serveur_addr.sin_addr) <= 0) {
-        perror("Client : erreur lors de la conversion de l'adresse IP");
+        perror("erreur lors de la conversion de l'adresse IP");
         close(MaSocket);
         exit(1);
     }
 
     ping(pseudo, MaSocket, serveur_addr);
     if (pong_wait(MaSocket) == -1) {
-        printf("Client : Join failed, exiting...\n");
+        printf("Join failed, exiting...\n");
         close(MaSocket);
         exit(1);
     }
@@ -137,26 +137,12 @@ int main(int argc, char* argv[]) {
         free(line);
         printf("\033[A\33[2K\r");  // Move cursor up and clear the line
 
-        // printf("Client : message à envoyer : %s", message);
+        // printf("message à envoyer : %s", message);
         if (sendto(MaSocket, &message_sent, sizeof(message_sent), 0, (struct sockaddr*)&serveur_addr, sizeof(serveur_addr)) < 0) {
-            perror("Client : erreur à l'envoi");
+            perror("erreur à l'envoi");
             close(MaSocket);
             exit(1);
         }
-
-        /*
-        struct ChatMessage message_received;
-        socklen_t addr_len = sizeof(serveur_addr);
-        int retourRecv = recvfrom(MaSocket, &message_received, sizeof(message_received), 0, (struct sockaddr*)&serveur_addr, &addr_len);
-        if (retourRecv < 0) {
-            perror("Client : erreur à la réception");
-            close(MaSocket);
-            exit(1);
-        }
-        message_received.pseudo[sizeof(message_received.pseudo) - 1] = '\0';
-        message_received.content[sizeof(message_received.content) - 1] = '\0';
-        printf("%s : %s", message_received.pseudo, message_received.content);
-        */
     }
     close(MaSocket);
     pthread_join(thread, NULL);
